@@ -16,4 +16,6 @@ export const BR = [
   "Mountain Hardwear",
   "Nike (ref)",
   "Lululemon (ref)",
+  "Adidas (ref)",
+  "Under Armour (ref)",
 ];

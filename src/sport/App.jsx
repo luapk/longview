@@ -68,12 +68,60 @@ const TimelineTab=()=> {const groups=[{k:"NOW",l:"NOW — Act Immediately",cl:C.
   ? <Empty label="NO ACTIONS LOGGED" hint="Once scenarios are stable, derive NOW / MONITOR / PREP actions. NOW = immediate decisions, MON = triggers to watch, PREP = optionality to build."/>
   : <div style={{display:"grid",gap:24}}>{groups.map(({k,l,cl,s:sub})=> <div key={k}><h3 style={{fontFamily:F.head,fontSize:22,color:cl,margin:"0 0 4px"}}>{l}</h3><p style={{fontFamily:F.mono,fontSize:11,color:C.whiteFaint,margin:"0 0 12px"}}>{sub}</p><div style={{display:"grid",gap:8}}>{TL[k].map((item,i)=> <Cd key={i}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}><p style={{fontFamily:F.body,fontSize:14,color:C.white,margin:0,flex:1,lineHeight:1.5}}>{item.a}</p><div style={{textAlign:"right",flexShrink:0}}><div style={{fontFamily:F.mono,fontSize:10,color:cl}}>{item.w}</div><div style={{fontFamily:F.mono,fontSize:10,color:C.whiteFaint,marginTop:4}}>→ {SC[item.s-1]?.tt}</div></div></div></Cd>)}</div></div>)}</div>};
 
+const VersusTab=()=>{
+  const[idxA,setIdxA]=useState(0);
+  const[idxB,setIdxB]=useState(()=>{const i=BR.findIndex(b=>/adidas/i.test(b));return i>=0?i:Math.min(9,BR.length-1)});
+  const rCol={Threat:C.red,Opportunity:C.green,Monitor:C.amber};
+  const rBg={Threat:"rgba(232,84,84,0.08)",Opportunity:"rgba(127,176,105,0.08)",Monitor:"rgba(244,162,97,0.08)"};
+  const res=(idx)=>SC.reduce((a,sc,si)=>{const c=MX[si]?.[idx];if(c)a[c.r]=(a[c.r]||0)+1;return a},{Threat:0,Opportunity:0,Monitor:0});
+  const sigsFor=(idx)=>{const nm=BR[idx].replace(/\s*\(ref\)/i,"").trim();const re=new RegExp("\\b"+nm.replace(/[.*+?^${}()|[\]\\]/g,"\\$&").replace(/\s+/g,"\\s+")+"\\b","i");return S.filter(s=>re.test(s.t+" "+s.de+" "+s.sw))};
+  const selSt={width:"100%",background:C.abyssMid,border:"1px solid rgba(255,107,53,0.2)",borderRadius:4,padding:"8px 12px",fontFamily:F.body,fontSize:14,color:C.white,marginBottom:16,cursor:"pointer",outline:"none",appearance:"none"};
+  const sA=sigsFor(idxA),sB=sigsFor(idxB);
+  if(MX.length===0||SC.length===0)return <Empty label="MATRIX REQUIRED" hint="The Versus tab needs scenarios.js and matrix.js populated before it can render a comparison."/>;
+  return <div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:28}}>
+      {[[idxA,setIdxA,"BRAND A",C.gold],[idxB,setIdxB,"BRAND B",C.blue]].map(([idx,set,lbl,ac],ki)=>{
+        const r=res(idx);
+        return <Cd key={ki} glow><div style={{fontFamily:F.mono,fontSize:10,color:ac,letterSpacing:"0.15em",marginBottom:8}}>{lbl}</div>
+          <select value={idx} onChange={e=>set(Number(e.target.value))} style={selSt}>{BR.map((b,i)=><option key={i} value={i}>{b}</option>)}</select>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{["Opportunity","Monitor","Threat"].map(rt=><span key={rt} style={{fontFamily:F.mono,fontSize:10,color:rCol[rt],background:rBg[rt],border:`1px solid ${rCol[rt]}33`,padding:"3px 10px",borderRadius:4}}>{rt} {r[rt]||0}/{SC.length}</span>)}</div>
+        </Cd>;
+      })}
+    </div>
+    <div style={{fontFamily:F.mono,fontSize:11,color:C.gold,letterSpacing:"0.15em",marginBottom:12}}>SCENARIO EXPOSURE</div>
+    <div style={{overflowX:"auto",marginBottom:32}}><table style={{borderCollapse:"separate",borderSpacing:4,width:"100%"}}>
+      <thead><tr>
+        <th style={{fontFamily:F.mono,fontSize:10,color:C.whiteFaint,textAlign:"left",padding:"8px 12px",minWidth:240}}>SCENARIO</th>
+        <th style={{fontFamily:F.mono,fontSize:10,color:C.gold,textAlign:"center",padding:8,whiteSpace:"nowrap"}}>{BR[idxA].toUpperCase()}</th>
+        <th style={{fontFamily:F.mono,fontSize:10,color:C.blue,textAlign:"center",padding:8,whiteSpace:"nowrap"}}>{BR[idxB].toUpperCase()}</th>
+      </tr></thead>
+      <tbody>{SC.map((sc,si)=>{const cA=MX[si]?.[idxA],cB=MX[si]?.[idxB];return <tr key={sc.id}>
+        <td style={{padding:"8px 12px"}}><span style={{fontFamily:F.mono,fontSize:10,color:C.whiteFaint,marginRight:8}}>{sc.ti.toUpperCase()}</span><span style={{fontFamily:F.body,fontSize:14,color:C.white}}>{sc.tt}</span></td>
+        <td style={{padding:4,textAlign:"center"}}>{cA?<IC d={cA}/>:<span style={{color:C.whiteFaint}}>—</span>}</td>
+        <td style={{padding:4,textAlign:"center"}}>{cB?<IC d={cB}/>:<span style={{color:C.whiteFaint}}>—</span>}</td>
+      </tr>})}</tbody>
+    </table></div>
+    <div style={{fontFamily:F.mono,fontSize:11,color:C.gold,letterSpacing:"0.15em",marginBottom:12}}>SIGNAL EVIDENCE FROM THE SCAN</div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+      {[[idxA,sA,C.gold],[idxB,sB,C.blue]].map(([idx,ss,ac])=><div key={idx}>
+        <div style={{fontFamily:F.mono,fontSize:10,color:ac,marginBottom:10,letterSpacing:"0.1em"}}>{BR[idx].replace(/\s*\(ref\)/i,"").toUpperCase()} — {ss.length} SIGNAL{ss.length!==1?"S":""}</div>
+        {ss.length===0?<p style={{fontFamily:F.body,fontSize:13,color:C.whiteFaint,margin:0}}>No direct mentions in this scan.</p>:
+        <div style={{display:"grid",gap:6}}>{ss.map(s=><div key={s.id} style={{background:"rgba(22,29,36,0.6)",border:"1px solid rgba(232,241,242,0.06)",borderRadius:6,padding:"10px 14px"}}>
+          <div style={{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap"}}><Bg color={catCol[s.c]}>{s.c}</Bg><Bg color={typeCol[s.ty]}>{s.ty}</Bg></div>
+          <div style={{fontFamily:F.body,fontSize:13,color:C.white,lineHeight:1.4,marginBottom:4}}>{s.t}</div>
+          <div style={{fontFamily:F.mono,fontSize:10,color:C.whiteFaint}}>{s.g} · SURPRISE {"★".repeat(s.su)}{"☆".repeat(3-s.su)}</div>
+        </div>)}</div>}
+      </div>)}
+    </div>
+  </div>;
+};
+
 // PASSWORD
 const PW=({ok})=>{const[pw,setPw]=useState("");const[sh,setSh]=useState(false);const[er,setEr]=useState(false);const ck=()=>{if(pw==="scan2036")ok();else{setSh(true);setEr(true);setTimeout(()=>{setSh(false);setEr(false);setPw("")},600)}};return <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:C.abyss,fontFamily:F.body}}><Gr/><div style={{textAlign:"center",animation:sh?"shake 0.4s ease":"none"}}><div style={{fontFamily:F.mono,fontSize:11,color:C.gold,letterSpacing:"0.3em",marginBottom:8}}>HORIZON</div><div style={{fontFamily:F.head,fontSize:42,color:C.white,marginBottom:4,lineHeight:1.1}}>Sport &amp; Fitness Apparel</div><div style={{fontFamily:F.head,fontSize:22,color:C.whiteDim,fontStyle:"italic",marginBottom:32}}>Puma &middot; Columbia Portfolio</div><div style={{fontFamily:F.mono,fontSize:10,color:C.goldDim,letterSpacing:"0.15em",marginBottom:24}}>SCAN BUILD</div><div style={{display:"flex",gap:8,justifyContent:"center"}}><input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")ck()}} placeholder="ACCESS CODE" autoFocus style={{background:"rgba(232,241,242,0.04)",border:`1px solid ${er?C.red:'rgba(255,107,53,0.2)'}`,borderRadius:4,padding:"10px 16px",fontFamily:F.mono,fontSize:13,color:C.white,letterSpacing:"0.15em",textAlign:"center",outline:"none",width:200}}/><button onClick={ck} style={{background:C.goldDim,border:`1px solid ${C.gold}`,borderRadius:4,padding:"10px 20px",fontFamily:F.mono,fontSize:11,color:C.gold,cursor:"pointer",letterSpacing:"0.1em"}}>ENTER</button></div><style>{`@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-4px)}}`}</style></div></div>};
 
 // MAIN
-export default function App(){const[au,setAu]=useState(false);const[tab,setTab]=useState("signals");if(!au)return <PW ok={()=>setAu(true)}/>;const tabs=[{id:"signals",l:"Signals",n:S.length||null},{id:"drivers",l:"Drivers",n:DR.length||null},{id:"scenarios",l:"Scenarios",n:SC.length||null},{id:"matrix",l:"Impact Matrix"},{id:"timeline",l:"Timeline"}];
+export default function App(){const[au,setAu]=useState(false);const[tab,setTab]=useState("signals");if(!au)return <PW ok={()=>setAu(true)}/>;const tabs=[{id:"signals",l:"Signals",n:S.length||null},{id:"drivers",l:"Drivers",n:DR.length||null},{id:"scenarios",l:"Scenarios",n:SC.length||null},{id:"matrix",l:"Impact Matrix"},{id:"timeline",l:"Timeline"},{id:"versus",l:"Versus"}];
 return <div style={{minHeight:"100vh",background:C.abyss,fontFamily:F.body,color:C.white}}><Gr/><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@300;400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/><style>{`*{box-sizing:border-box}body{margin:0;background:${C.abyss}}::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,107,53,0.2);border-radius:3px}`}</style>
 <header style={{position:"sticky",top:0,zIndex:100,background:"rgba(11,16,20,0.85)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,107,53,0.1)",padding:"16px 32px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"baseline",gap:12}}><span style={{fontFamily:F.mono,fontSize:12,color:C.gold,letterSpacing:"0.2em",fontWeight:500}}>HORIZON</span><span style={{fontFamily:F.body,fontSize:13,color:C.whiteFaint}}>·</span><span style={{fontFamily:F.body,fontSize:13,color:C.whiteDim}}>Sport &amp; Fitness Apparel · Puma &times; Columbia</span></div><span style={{fontFamily:F.mono,fontSize:10,color:C.goldDim,border:`1px solid ${C.goldDim}`,padding:"3px 8px",borderRadius:3}}>SCAN BUILD</span></header>
 <nav style={{position:"sticky",top:56,zIndex:99,background:"rgba(11,16,20,0.9)",backdropFilter:"blur(16px)",borderBottom:"1px solid rgba(232,241,242,0.04)",padding:"0 32px",display:"flex",overflowX:"auto"}}>{tabs.map(t=> <button key={t.id} onClick={()=>setTab(t.id)} style={{background:"none",border:"none",padding:"14px 20px",whiteSpace:"nowrap",fontFamily:F.mono,fontSize:11,letterSpacing:"0.08em",color:tab===t.id?C.gold:C.whiteFaint,cursor:"pointer",borderBottom:tab===t.id?`2px solid ${C.gold}`:"2px solid transparent"}}>{t.l.toUpperCase()}{t.n?` (${t.n})`:""}</button>)}</nav>
-<main style={{maxWidth:1200,margin:"0 auto",padding:"32px 32px 80px"}}>{tab==="signals"&&<SignalsTab/>}{tab==="drivers"&&<DriversTab/>}{tab==="scenarios"&&<ScenariosTab/>}{tab==="matrix"&&<MatrixTab/>}{tab==="timeline"&&<TimelineTab/>}</main></div>}
+<main style={{maxWidth:1200,margin:"0 auto",padding:"32px 32px 80px"}}>{tab==="signals"&&<SignalsTab/>}{tab==="drivers"&&<DriversTab/>}{tab==="scenarios"&&<ScenariosTab/>}{tab==="matrix"&&<MatrixTab/>}{tab==="timeline"&&<TimelineTab/>}{tab==="versus"&&<VersusTab/>}</main></div>}
