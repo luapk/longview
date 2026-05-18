@@ -7,6 +7,7 @@ import { SC } from "./data/scenarios.js";
 import { BR } from "./data/brands.js";
 import { MX } from "./data/matrix.js";
 import { TL } from "./data/timeline.js";
+import { VA } from "./data/versus.js";
 
 // ═══════════════════════════════════════════════════════════
 // D3 GLOBE — inline topojson decode + orthographic
@@ -68,6 +69,45 @@ const TimelineTab=()=> {const groups=[{k:"NOW",l:"NOW — Act Immediately",cl:C.
   ? <Empty label="NO ACTIONS LOGGED" hint="Once scenarios are stable, derive NOW / MONITOR / PREP actions. NOW = immediate decisions, MON = triggers to watch, PREP = optionality to build."/>
   : <div style={{display:"grid",gap:24}}>{groups.map(({k,l,cl,s:sub})=> <div key={k}><h3 style={{fontFamily:F.head,fontSize:22,color:cl,margin:"0 0 4px"}}>{l}</h3><p style={{fontFamily:F.mono,fontSize:11,color:C.whiteFaint,margin:"0 0 12px"}}>{sub}</p><div style={{display:"grid",gap:8}}>{TL[k].map((item,i)=> <Cd key={i}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}><p style={{fontFamily:F.body,fontSize:14,color:C.white,margin:0,flex:1,lineHeight:1.5}}>{item.a}</p><div style={{textAlign:"right",flexShrink:0}}><div style={{fontFamily:F.mono,fontSize:10,color:cl}}>{item.w}</div><div style={{fontFamily:F.mono,fontSize:10,color:C.whiteFaint,marginTop:4}}>→ {SC[item.s-1]?.tt}</div></div></div></Cd>)}</div></div>)}</div>};
 
+const StrategicAnalysis=({idxA,idxB,res,sigsFor})=>{
+  const key=[idxA,idxB].sort((a,b)=>a-b).join("-");
+  const pre=VA[key];
+  const rCol={Threat:C.red,Opportunity:C.green,Monitor:C.amber};
+  if(pre)return <div style={{marginTop:40}}>
+    <div style={{fontFamily:F.mono,fontSize:11,color:C.gold,letterSpacing:"0.15em",marginBottom:4}}>{pre.heading.toUpperCase()}</div>
+    <div style={{width:40,height:2,background:C.gold,marginBottom:24,opacity:0.4}}/>
+    <div style={{display:"grid",gap:28}}>
+      {pre.paras.map((p,i)=><div key={i}>
+        <div style={{fontFamily:F.mono,fontSize:10,color:C.gold,letterSpacing:"0.12em",marginBottom:10,opacity:0.7}}>{p.label}</div>
+        <p style={{fontFamily:F.body,fontSize:15,color:C.whiteDim,lineHeight:1.85,margin:0}}>{p.text}</p>
+      </div>)}
+    </div>
+  </div>;
+  // Dynamic fallback — generate from matrix data
+  const rA=res(idxA),rB=res(idxB);
+  const nA=BR[idxA].replace(/\s*\(ref\)/i,""),nB=BR[idxB].replace(/\s*\(ref\)/i,"");
+  const scoreOf=r=>({Opportunity:2,Monitor:1,Threat:0})[r]||0;
+  const totalA=Object.entries(rA).reduce((s,[r,n])=>s+scoreOf(r)*n,0);
+  const totalB=Object.entries(rB).reduce((s,[r,n])=>s+scoreOf(r)*n,0);
+  const leader=totalA>=totalB?nA:nB,trailer=totalA>=totalB?nB:nA;
+  const sA=sigsFor(idxA),sB=sigsFor(idxB);
+  return <div style={{marginTop:40}}>
+    <div style={{fontFamily:F.mono,fontSize:11,color:C.gold,letterSpacing:"0.15em",marginBottom:4}}>{nA.toUpperCase()} VS {nB.toUpperCase()} — SIGNAL-DERIVED ASSESSMENT</div>
+    <div style={{width:40,height:2,background:C.gold,marginBottom:24,opacity:0.4}}/>
+    <div style={{display:"grid",gap:28}}>
+      <div><div style={{fontFamily:F.mono,fontSize:10,color:C.gold,letterSpacing:"0.12em",marginBottom:10,opacity:0.7}}>OVERALL RESILIENCE</div>
+        <p style={{fontFamily:F.body,fontSize:15,color:C.whiteDim,lineHeight:1.85,margin:0}}>Across the five modelled scenarios, {leader} carries the stronger portfolio position. {nA} faces {rA.Threat||0} Threat, {rA.Monitor||0} Monitor and {rA.Opportunity||0} Opportunity ratings; {nB} faces {rB.Threat||0} Threat, {rB.Monitor||0} Monitor and {rB.Opportunity||0} Opportunity ratings. The gap reflects different structural exposures to the two critical uncertainty axes — cultural consolidation vs fragmentation, and regulatory harmonisation vs protectionism — rather than any single strategic decision.</p>
+      </div>
+      <div><div style={{fontFamily:F.mono,fontSize:10,color:C.gold,letterSpacing:"0.12em",marginBottom:10,opacity:0.7}}>SIGNAL EVIDENCE — {nA.toUpperCase()}</div>
+        <p style={{fontFamily:F.body,fontSize:15,color:C.whiteDim,lineHeight:1.85,margin:0}}>{sA.length>0?`${sA.length} signals in the scan directly reference ${nA}, spanning ${[...new Set(sA.map(s=>s.c))].join(", ")} categories. The ${sA.filter(s=>s.ty==="Positive").length} positive and ${sA.filter(s=>s.ty==="Negative").length} negative signals suggest a mixed near-term picture. The highest-surprise signals (score 3) are: ${sA.filter(s=>s.su===3).map(s=>s.t).slice(0,2).join("; ") || "none flagged at surprise level 3"}.`:`No direct signal mentions found for ${nA} in the current scan. The scenario scores are derived from category-level analysis rather than brand-specific evidence.`}</p>
+      </div>
+      <div><div style={{fontFamily:F.mono,fontSize:10,color:C.gold,letterSpacing:"0.12em",marginBottom:10,opacity:0.7}}>SIGNAL EVIDENCE — {nB.toUpperCase()}</div>
+        <p style={{fontFamily:F.body,fontSize:15,color:C.whiteDim,lineHeight:1.85,margin:0}}>{sB.length>0?`${sB.length} signals in the scan directly reference ${nB}, spanning ${[...new Set(sB.map(s=>s.c))].join(", ")} categories. The ${sB.filter(s=>s.ty==="Positive").length} positive and ${sB.filter(s=>s.ty==="Negative").length} negative signals suggest a mixed near-term picture. The highest-surprise signals (score 3) are: ${sB.filter(s=>s.su===3).map(s=>s.t).slice(0,2).join("; ") || "none flagged at surprise level 3"}.`:`No direct signal mentions found for ${nB} in the current scan. The scenario scores are derived from category-level analysis rather than brand-specific evidence.`}</p>
+      </div>
+    </div>
+  </div>;
+};
+
 const VersusTab=()=>{
   const[idxA,setIdxA]=useState(0);
   const[idxB,setIdxB]=useState(()=>{const i=BR.findIndex(b=>/adidas/i.test(b));return i>=0?i:Math.min(9,BR.length-1)});
@@ -113,6 +153,7 @@ const VersusTab=()=>{
         </div>)}</div>}
       </div>)}
     </div>
+    <StrategicAnalysis idxA={idxA} idxB={idxB} res={res} sigsFor={sigsFor}/>
   </div>;
 };
 
